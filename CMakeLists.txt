@@ -11,11 +11,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
+find_package(Freetype REQUIRED)
 
-include_directories( ${GLEW_INCLUDE_DIRS} ${OPENGL_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/common)
+include_directories( ${GLEW_INCLUDE_DIRS} ${OPENGL_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/common)
 add_library(common common/shader.cpp)
 
 
 add_executable(Learn_opengl main.cpp)
 #add_executable(Learn_opengl ${PROJECT_SOURCE_DIR}/main.cpp)
-target_link_libraries(Learn_opengl ${GLEW_LIBRARIES} ${OPENGL_LIBRARIES} glfw common)
+target_link_libraries(Learn_opengl ${GLEW_LIBRARIES} ${OPENGL_LIBRARIES} ${FREETYPE_LIBRARIES} glfw common)
