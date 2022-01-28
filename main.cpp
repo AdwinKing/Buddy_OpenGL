@@ -166,41 +166,6 @@ float rayTriangleIntersect(const glm::vec3 &orig, const glm::vec3 &dir, const gl
     return t; // this ray hits the triangle
 }
 
-//std::vector<long> getSelectedTriangleIndex(const PLYdata &data, const glm::vec3 &camPos, const glm::vec3 &dir)
-//{
-//    float distanceToCamera = SELECTION_RANGE * 2;
-//    long indexOfNearest = -1;
-//    float nearestDistance = distanceToCamera;
-//    std::vector<long> result;
-//    for (long i = 0; i < data.numOfFaces; i++) {
-//        // filter out triangles that are too far
-//        bool atLeastOneNear = false;
-//        for (int j = 0; j < 3; j++) {
-//            bool isNear = true;
-//            for (int k =0; k < 3; k++) {
-//                if (fabs(data.vertices[data.faces[i * 3 + j] * 6 + k] - camPos[k]) >  SELECTION_RANGE) {
-//                    isNear = false;
-//                    break;
-//                }
-//            }
-//            if (isNear) {
-//                atLeastOneNear = true;
-//                break;
-//            }
-//        }
-//        if (!atLeastOneNear) continue;
-//        float distance = rayTriangleIntersect(camPos, dir, glm::vec3(data.vertices[data.faces[i * 3] * 6], data.vertices[data.faces[i * 3] * 6 + 1], data.vertices[data.faces[i * 3] * 6 + 2]), glm::vec3(data.vertices[data.faces[i * 3 + 1] * 6], data.vertices[data.faces[i * 3 + 1] * 6 + 1], data.vertices[data.faces[i * 3 + 1] * 6 + 2]), glm::vec3(data.vertices[data.faces[i * 3 + 2] * 6], data.vertices[data.faces[i * 3 + 2] * 6 + 1], data.vertices[data.faces[i * 3 + 2] * 6 + 2]));
-//        if (distance < 0) continue;
-////        if (distance < nearestDistance) {
-////            nearestDistance = distance;
-////            indexOfNearest = i;
-////        }
-//        result.push_back(i);
-//    }
-//    //return indexOfNearest;
-//    return result;
-//}
-
 long getSelectedTriangleIndex(const PLYdata &data, const glm::vec3 &camPos, const glm::vec3 &dir)
 {
     float distanceToCamera = SELECTION_RANGE * 2;
@@ -233,12 +198,52 @@ long getSelectedTriangleIndex(const PLYdata &data, const glm::vec3 &camPos, cons
     return indexOfNearest;
 }
 
+float rayVertexIntersect(const glm::vec3 &orig, const glm::vec3 &dir, const glm::vec3 &v0)
+{
+    glm::vec3 dirUnit = glm::normalize(dir);
+    glm::vec3 OV = v0 - orig;
+    float distanceToP = glm::dot(OV, dirUnit);
+    if (distanceToP < 0) {
+        return -1;
+    }
+    float distanceToRay = glm::length(OV - distanceToP * dirUnit);
+    if (distanceToRay > 0.05f) {
+        return -1;
+    }
+    return distanceToP;
+}
+
+long getSelectedVertexIndex(const PLYdata &data, const glm::vec3 &camPos, const glm::vec3 &dir)
+{
+    float distanceToCamera = SELECTION_RANGE * 2;
+    long indexOfNearest = -1;
+    float nearestDistance = distanceToCamera;
+    for (long i = 0; i < data.numOfVertices; i++) {
+        // filter out triangles that are too far
+        bool isNear = true;
+        for (int j = 0; j < 3; j++) {
+            if (fabs(data.vertices[i * 6 + j] - camPos[j]) > SELECTION_RANGE) {
+                isNear = false;
+                break;
+            }
+        }
+        if (!isNear) continue;
+        float distance = rayVertexIntersect(camPos, dir, glm::vec3(data.vertices[6 * i], data.vertices[6 * i + 1], data.vertices[6 * i + 2]));
+        if (distance < 0) continue;
+        if (distance < nearestDistance) {
+            nearestDistance = distance;
+            indexOfNearest = i;
+        }
+    }
+    return indexOfNearest;
+}
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
 
-void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos)
+void cursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 {
     CallbackContext* context = static_cast<CallbackContext*>(glfwGetWindowUserPointer(window));
     //std::cout << xpos << ";" << ypos << std::endl;
@@ -383,7 +388,7 @@ int main( void )
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    glfwSetCursorPosCallback(window, cursor_pos_callback);
+    glfwSetCursorPosCallback(window, cursorPosCallback);
 
     if (GLEW_OK != glewInit()){
         std::cout << "Failed to init GLEW" << std::endl;
@@ -457,7 +462,7 @@ int main( void )
             -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f
         };
     //load shaders
-    //Shader cubeShader = Shader("/home/adwin/Codes/c++/opengl_tutorials/Learn_opengl/vertex.vert", "/home/adwin/Codes/c++/opengl_tutorials/Learn_opengl/frag.frag");
+    Shader cubeShader = Shader("/home/adwin/Codes/c++/opengl_tutorials/Learn_opengl/cube.vert", "/home/adwin/Codes/c++/opengl_tutorials/Learn_opengl/cube.frag");
     Shader bunnyShader = Shader("/home/adwin/Codes/c++/opengl_tutorials/Learn_opengl/bunny.vert", "/home/adwin/Codes/c++/opengl_tutorials/Learn_opengl/bunny.frag");
     Shader lampShader = Shader("/home/adwin/Codes/c++/opengl_tutorials/Learn_opengl/lamp.vert", "/home/adwin/Codes/c++/opengl_tutorials/Learn_opengl/lamp.frag");
     Shader textShader = Shader("/home/adwin/Codes/c++/opengl_tutorials/Learn_opengl/text.vert", "/home/adwin/Codes/c++/opengl_tutorials/Learn_opengl/text.frag");
@@ -493,8 +498,7 @@ int main( void )
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
 
-    // note that this is allowed, the call to glVertexAttribPointer registered VBO1 as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
-
+    // Bind data of lamp
     GLuint lightVAO;
     glGenVertexArrays(1, &lightVAO);
     glBindVertexArray(lightVAO);
@@ -503,6 +507,8 @@ int main( void )
     glEnableVertexAttribArray(0);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glEnable(GL_CULL_FACE);
 
     // You can unbind the VAO1 afterwards so other VAO1 calls won't accidentally modify this VAO1, but this rarely happens. Modifying other
     // VAO1s requires a call to glBindVertexArray anyways so we generally don't unbind VAO1s (nor VBO1s) when it's not directly necessary.
@@ -523,10 +529,11 @@ int main( void )
     glm::vec3 lampColor = glm::vec3(1.0f, 1.0f, 1.0f);
     glm::vec3 bunnyColor = glm::vec3(0.8f, 0.8f, 0.6f);
 
-
-    int fps = 0;
+    bool showTriangle = true;
+    int keyCooldown = 0;
     while(!glfwWindowShouldClose(window))
     {
+        // glfw callback doesn't provide easy method of passing data. Thus I give up writing a callback function for keyboard input.
         if (GLFW_PRESS == glfwGetKey(window, GLFW_KEY_ESCAPE))
             glfwSetWindowShouldClose(window, true);
         if (GLFW_PRESS == glfwGetKey(window, GLFW_KEY_W)){
@@ -555,9 +562,19 @@ int main( void )
             cameraHorizontalAngle -= 0.05;
             cameraHorizontalAngle = fmod(cameraHorizontalAngle, M_PI * 2);
         }
+        if (GLFW_PRESS == glfwGetKey(window, GLFW_KEY_L)){
+            if (keyCooldown == 0) {
+                showTriangle = !showTriangle;
+                keyCooldown = 10;
+            }
+        }
+        if (keyCooldown > 0) {
+            keyCooldown--;
+        }
         //.
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         //.
 
 //        glUseProgram(cubeProgramID);
@@ -568,17 +585,12 @@ int main( void )
 //        float blueTweak = sin(timeValue + 4.2f);
 //        int colorTweakLocation = glGetUniformLocation(cubeProgramID, "colorTweak");
 //        glUniform3f(colorTweakLocation, redTweak, greenTweak, blueTweak);
-        if (fps % 100 == 0) {
-            std::cout << cameraPosition[0] << ";" << cameraPosition[1] << ";" << cameraPosition[2] << std::endl;
-            fps = 0;
-        }
-        fps++;
 
 //        view = glm::rotate(glm::mat4(1.0f), -1.0f * (float)cameraHorizontalAngle, glm::vec3(0.0f, 1.0f, 0.0f));
 //        view = glm::translate(view, -1.0f * cameraPosition);
 //        view = glm::rotate(view, (float)(cameraVerticalAngle - M_PI / 2), glm::vec3(1.0f, 0.0f, 0.0f));
-           glm::vec3 cameraDir = glm::vec3((float)sin(cameraVerticalAngle) * sin(cameraHorizontalAngle), (float)cos(cameraVerticalAngle), (float)sin(cameraVerticalAngle) * cos(cameraHorizontalAngle));
-          view = glm::lookAt(cameraPosition, cameraPosition + cameraDir, glm::vec3(0.0f, 1.0f, 0.0f));
+         glm::vec3 cameraDir = glm::vec3((float)sin(cameraVerticalAngle) * sin(cameraHorizontalAngle), (float)cos(cameraVerticalAngle), (float)sin(cameraVerticalAngle) * cos(cameraHorizontalAngle));
+         view = glm::lookAt(cameraPosition, cameraPosition + cameraDir, glm::vec3(0.0f, 1.0f, 0.0f));
 
 //        cubeShader.use();
 //        glBindVertexArray(VAO1);
@@ -605,12 +617,12 @@ int main( void )
         //glBindVertexArray(VAO1);
         //glDrawArrays(GL_TRIANGLES, 0, 36);
         //.
-        //lampPosition = 200.0f * glm::vec3((float)cos(glfwGetTime()), 0.0f, (float)sin(glfwGetTime()));
+        //lampPosition = 20.0f * glm::vec3((float)cos(glfwGetTime()), 0.0f, (float)sin(glfwGetTime()));
         //cameraPosition = 20.0f * glm::vec3((float)cos(glfwGetTime()), 0.0f, (float)sin(glfwGetTime()));
-        //lampPosition = cameraPosition + glm::vec3(0.0f, 1.0f, 0.0f);
+        lampPosition = cameraPosition + glm::vec3(0.0f, 0.4f, 0.0f);
         //lampPosition = cameraPosition;
         lampShader.use();
-        lampShader.setMat4("model", glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(0.2f, 0.2f, 0.2f)), 5.0f * lampPosition));
+        lampShader.setMat4("model", glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(0.1f, 0.1f, 0.1f)), 10.0f * lampPosition));
         //lampShader.setMat4("model", glm::translate(glm::mat4(1.0f), lampPosition));
         lampShader.setMat4("view", view);
         lampShader.setMat4("projection", projection);
@@ -630,17 +642,39 @@ int main( void )
         bunnyShader.setVec3("cameraPos", cameraPosition);
         glBindVertexArray(VAO2);
 
-        long indexOfNearest = getSelectedTriangleIndex(*bunnyData, cameraPosition, cameraDir);
-        if (indexOfNearest > 0) {
-            glDrawElements(GL_TRIANGLES, 3 * indexOfNearest, GL_UNSIGNED_INT, (void*)0);
-            bunnyShader.setVec3("bunnyColor", glm::vec3(0.8f, 0.0f, 0.0f));
-            glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (void*)(3 * indexOfNearest * sizeof(unsigned int)));
-            bunnyShader.setVec3("bunnyColor", bunnyColor);
-            glDrawElements(GL_TRIANGLES, 3 * (bunnyData->numOfFaces - indexOfNearest - 1), GL_UNSIGNED_INT, (void*)(3 * (indexOfNearest + 1) * sizeof(unsigned int)));
+        if (showTriangle) {
+            long indexOfNearestTriangle = getSelectedTriangleIndex(*bunnyData, cameraPosition, cameraDir);
+            if (indexOfNearestTriangle > 0) {
+                glDrawElements(GL_TRIANGLES, 3 * indexOfNearestTriangle, GL_UNSIGNED_INT, (void*)0);
+                bunnyShader.setVec3("bunnyColor", glm::vec3(0.8f, 0.0f, 0.0f));
+                glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (void*)(3 * indexOfNearestTriangle * sizeof(unsigned int)));
+                bunnyShader.setVec3("bunnyColor", bunnyColor);
+                glDrawElements(GL_TRIANGLES, 3 * (bunnyData->numOfFaces - indexOfNearestTriangle - 1), GL_UNSIGNED_INT, (void*)(3 * (indexOfNearestTriangle + 1) * sizeof(unsigned int)));
 
-            renderText(textShader, std::string("Index Of the Selected Triangle:") + std::to_string(indexOfNearest), 0.0f, 0.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f), textVAO, textVBO);
+                renderText(textShader, std::string("Index Of the Selected Triangle:") + std::to_string(indexOfNearestTriangle), 0.0f, 0.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f), textVAO, textVBO);
+            } else {
+                glDrawElements(GL_TRIANGLES, bunnyData->numOfFaces * 3, GL_UNSIGNED_INT, (void*)0);
+            }
         } else {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             glDrawElements(GL_TRIANGLES, bunnyData->numOfFaces * 3, GL_UNSIGNED_INT, (void*)0);
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            glDisable(GL_CULL_FACE);
+            long indexOfNearestVertex = getSelectedVertexIndex(*bunnyData, cameraPosition, cameraDir);
+            //std::cout << indexOfNearestVertex << std::endl;
+            if (indexOfNearestVertex > 0) {
+                cubeShader.use();
+                cubeShader.setMat4("model", glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.05f)), 20.0f * glm::vec3(bunnyData->vertices[indexOfNearestVertex * 6], bunnyData->vertices[indexOfNearestVertex * 6 + 1], bunnyData->vertices[indexOfNearestVertex * 6 + 2])));
+                cubeShader.setMat4("view", view);
+                cubeShader.setMat4("projection", projection);
+                cubeShader.setVec3("cubeColor", glm::vec3(0.0f, 0.0f, 0.8f));
+                glBindVertexArray(VAO1);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+                renderText(textShader, std::string("Index Of the Nearest Vertex:") + std::to_string(indexOfNearestVertex), 0.0f, WINDOW_HEIGHT - 40, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f), textVAO, textVBO);
+
+            }
+            glEnable(GL_CULL_FACE);
+
         }
         //glDrawElements(GL_TRIANGLES, bunnyData->numOfFaces * 3, GL_UNSIGNED_INT, (void*)0);
 
@@ -664,7 +698,7 @@ int main( void )
         //long indexOfNearest = getSelectedTriangleIndex(*bunnyData, cameraPosition, cameraDir);
 //        std::vector<long> indices = getSelectedTriangleIndex(*bunnyData, cameraPosition, cameraDir);
 
-////        if (indexOfNearest > 0) {
+//        if (indexOfNearest > 0) {
 //        if (indices.size() > 0) {
 //            bunnyShader.use();
 //            //bunnyShader.setMat4("model", glm::scale(glm::mat4(1.0f), glm::vec3(0.1f, 0.1f, 0.1f)));
@@ -697,6 +731,9 @@ int main( void )
     glDeleteBuffers(1, &VBO2);
     glDeleteBuffers(1, &EBO2);
     glDeleteVertexArrays(1, &VAO2);
+    glDeleteVertexArrays(1, &lightVAO);
+    glDeleteBuffers(1, &textVBO);
+    glDeleteVertexArrays(1, &textVAO);
     glfwTerminate();
 	return 0;
 }
